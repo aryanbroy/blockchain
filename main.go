@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"os"
 	"time"
 )
 
@@ -25,7 +26,10 @@ const targetBits = 24
 const maxNonce = math.MaxInt64
 
 func main() {
-	bc := NewBlockChain()
+	bc, err := NewBlockChain()
+	if err != nil {
+		os.Exit(0)
+	}
 
 	bc.AddBlock("Send 1 ETH to alom")
 	bc.AddBlock("Send 1.5 ETH to 6wong")

@@ -15,12 +15,12 @@ func (b *Block) Serialize() []byte {
 }
 
 // does the opposite of Serialize
-func Deserialize(data []byte) Block {
+func Deserialize(data []byte) *Block {
 	var block Block
 
 	reader := bytes.NewReader(data)
 	decoder := gob.NewDecoder(reader)
 	decoder.Decode(&block)
 
-	return block
+	return &block
 }

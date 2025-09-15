@@ -7,15 +7,20 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-type BlockChain struct {
+type Blockchain struct {
 	tip []byte
 	db  *bolt.DB
+}
+
+type BlockchainIterator struct {
+	currentHash []byte
+	db          *bolt.DB
 }
 
 const dbFile = "myDB.db"
 const bucket = "bucket"
 
-func NewBlockChain() (*BlockChain, error) {
+func NewBlockChain() (*Blockchain, error) {
 	var tip []byte
 
 	db, err := bolt.Open(dbFile, 0600, nil)
@@ -46,13 +51,13 @@ func NewBlockChain() (*BlockChain, error) {
 		return nil
 	})
 
-	return &BlockChain{
+	return &Blockchain{
 		tip: tip,
 		db:  db,
 	}, nil
 }
 
-func (bc *BlockChain) AddBlock(data string) {
+func (bc *Blockchain) AddBlock(data string) {
 	var lastHash []byte
 
 	err := bc.db.View(func(tx *bolt.Tx) error {
@@ -75,4 +80,32 @@ func (bc *BlockChain) AddBlock(data string) {
 		bc.tip = newBlock.Hash
 		return nil
 	})
+}
+
+func (bc *Blockchain) Iterator() *BlockchainIterator {
+	return &BlockchainIterator{
+		currentHash: bc.tip,
+		db:          bc.db,
+	}
+}
+
+func (i *BlockchainIterator) Next() *Block {
+	var block *Block
+
+	err := i.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bucket))
+		encodedBlock := b.Get(i.currentHash)
+		block = Deserialize(encodedBlock)
+
+		return nil
+	})
+
+	if err != nil {
+		log.Println("Error starting a transaction!")
+		os.Exit(0)
+	}
+
+	i.currentHash = block.PreviousBlockHash
+
+	return block
 }
