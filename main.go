@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/sha256"
-	"fmt"
 	"math"
 	"math/big"
 	"os"
@@ -31,57 +29,10 @@ func main() {
 		os.Exit(0)
 	}
 
-	bc.AddBlock("Send 1 ETH to alom")
-	bc.AddBlock("Send 1.5 ETH to 6wong")
-	bc.AddBlock("Send 2 ETH to achi hoon")
+	defer bc.db.Close()
 
-	for _, block := range bc.blocks {
-		pow := NewProofOfWork(block)
-		isValid := pow.Validate()
-		fmt.Printf("Previous hash: %x\n", block.PreviousBlockHash)
-		fmt.Printf("Data: %s\n", block.Data)
-		fmt.Printf("Hash: %x\n", block.Hash)
-		fmt.Printf("Pow: %v\n", isValid)
-		fmt.Println()
-	}
-}
-
-func (pow *ProofOfWork) Run() (int, []byte) {
-	var hashInt big.Int
-	var hash [32]byte
-	nonce := 0
-
-	fmt.Printf("Mining the block containing \"%s\"\n", pow.block.Data)
-	for nonce < maxNonce {
-		data := pow.prepareData(nonce)
-		hash = sha256.Sum256(data)
-		fmt.Printf("\r%x", hash)
-		hashInt.SetBytes(hash[:])
-
-		if nonce == math.MaxInt64 {
-			fmt.Println("Max nonce reached")
-			break
-		}
-		if hashInt.Cmp(pow.target) == -1 {
-			break
-		} else {
-			nonce++
-		}
-	}
-
-	fmt.Print("\n\n")
-	return nonce, hash[:]
-}
-
-func (pow *ProofOfWork) Validate() bool {
-	var hashInt big.Int
-
-	data := pow.prepareData(pow.block.Nonce)
-	hash := sha256.Sum256(data)
-	hashInt.SetBytes(hash[:])
-
-	isValid := hashInt.Cmp(pow.target) == -1
-	return isValid
+	cli := CLI{bc: bc}
+	cli.Run()
 }
 
 func NewBlock(data string, prevBlockHash []byte) *Block {
