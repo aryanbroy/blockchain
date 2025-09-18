@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -17,10 +18,19 @@ type BlockchainIterator struct {
 	db          *bolt.DB
 }
 
-const dbFile = "myDB.db"
-const bucket = "bucket"
+const dbFile = "blockchain.db"
+const bucket = "nigaMania"
+const genesisCoinbaseData = "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks" // later
 
-func NewBlockChain() (*Blockchain, error) {
+func dbExists(db string) bool {
+	if _, err := os.Stat(db); os.IsNotExist(err) {
+		return false
+	}
+
+	return true
+}
+
+func NewBlockChain(address string) (*Blockchain, error) {
 	var tip []byte
 
 	db, err := bolt.Open(dbFile, 0600, nil)
@@ -32,12 +42,15 @@ func NewBlockChain() (*Blockchain, error) {
 	err = db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
 		if b == nil {
-			genesis := NewGenesisBlock()
+			coinbaseTx := NewCoinbaseTx(address, genesisCoinbaseData)
+			genesis := NewGenesisBlock(coinbaseTx)
+
 			b, err := tx.CreateBucket([]byte(bucket))
 			if err != nil {
 				log.Println("Error creating a bucket")
 				return err
 			}
+
 			err = b.Put(genesis.Hash, genesis.Serialize())
 			err = b.Put([]byte("l"), genesis.Hash)
 			tip = genesis.Hash
@@ -50,6 +63,10 @@ func NewBlockChain() (*Blockchain, error) {
 		}
 		return nil
 	})
+	if err != nil {
+		log.Println("Error updating the database.", err)
+		return nil, err
+	}
 
 	return &Blockchain{
 		tip: tip,
@@ -57,7 +74,72 @@ func NewBlockChain() (*Blockchain, error) {
 	}, nil
 }
 
-func (bc *Blockchain) AddBlock(data string) {
+func CreateBlockChain(address string) *Blockchain {
+	if dbExists(address) {
+		log.Println("Blockchain already exists")
+		os.Exit(1)
+	}
+
+	var tip []byte
+
+	db, err := bolt.Open(dbFile, 0600, nil)
+	if err != nil {
+		log.Println("Error opening the db file")
+		log.Panic(err)
+	}
+
+	err = db.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucket([]byte(bucket))
+		if err != nil {
+			if err != bolt.ErrBucketExists {
+				log.Println("Bucket already exists... so i am deleting it without your permission")
+				if err := tx.DeleteBucket([]byte(bucket)); err != nil {
+					log.Println("Error deleting the bucket")
+					return err
+				}
+				err = fmt.Errorf("Remove the bucket, hahaha, enjoy this error now")
+				return err
+			}
+			log.Println("Error creating a bucket")
+
+			return err
+		}
+
+		log.Println("Generating a new genesis block...")
+		fmt.Println()
+
+		coinbaseTx := NewCoinbaseTx(address, genesisCoinbaseData)
+		genesisBlock := NewGenesisBlock(coinbaseTx)
+
+		err = b.Put(genesisBlock.Hash, genesisBlock.Serialize())
+		if err != nil {
+			log.Println("Error updating db values")
+			return err
+		}
+
+		err = b.Put([]byte("l"), genesisBlock.Hash)
+		if err != nil {
+			log.Println("Error updating last blockchain value")
+			return err
+		}
+
+		tip = genesisBlock.Hash
+		return nil
+	})
+
+	if err != nil {
+		log.Println("Error creating a new blockchain")
+		log.Panic(err)
+	}
+
+	return &Blockchain{
+		tip: tip,
+		db:  db,
+	}
+
+}
+
+func (bc *Blockchain) MineBlock(transactions []*Transaction) {
 	var lastHash []byte
 
 	err := bc.db.View(func(tx *bolt.Tx) error {
@@ -71,7 +153,7 @@ func (bc *Blockchain) AddBlock(data string) {
 		os.Exit(0)
 	}
 
-	newBlock := NewBlock(data, lastHash)
+	newBlock := NewBlock(transactions, lastHash)
 
 	bc.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))

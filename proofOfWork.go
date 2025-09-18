@@ -8,6 +8,14 @@ import (
 	"math/big"
 )
 
+const targetBits = 24
+const maxNonce = math.MaxInt64
+
+type ProofOfWork struct {
+	block  *Block
+	target *big.Int
+}
+
 func NewProofOfWork(b *Block) *ProofOfWork {
 	target := big.NewInt(1)
 	target.Lsh(target, 256-targetBits)
@@ -24,10 +32,24 @@ func IntToHex(data int64) []byte {
 	return []byte(hexString)
 }
 
+func (block *Block) HashTransactions() []byte {
+	var txHashes [][]byte
+	var txHash [32]byte
+
+	for _, tx := range block.Transactions {
+		txHashes = append(txHashes, tx.ID)
+	}
+
+	hashData := bytes.Join(txHashes, []byte{})
+	txHash = sha256.Sum256(hashData)
+
+	return txHash[:]
+}
+
 func (pow *ProofOfWork) prepareData(nonce int) []byte {
 	data := bytes.Join([][]byte{
 		pow.block.PreviousBlockHash,
-		pow.block.Data,
+		pow.block.HashTransactions(),
 		IntToHex(pow.block.Timestamp),
 		IntToHex(int64(targetBits)),
 		IntToHex(int64(nonce)),
@@ -41,7 +63,7 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 	var hash [32]byte
 	nonce := 0
 
-	fmt.Printf("Mining the block containing \"%s\"\n", pow.block.Data)
+	// fmt.Printf("Mining the block containing \"%s\"\n", pow.block.)
 	for nonce < maxNonce {
 		data := pow.prepareData(nonce)
 		hash = sha256.Sum256(data)

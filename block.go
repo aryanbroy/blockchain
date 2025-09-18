@@ -3,7 +3,16 @@ package main
 import (
 	"bytes"
 	"encoding/gob"
+	"time"
 )
+
+type Block struct {
+	Timestamp         int64
+	Transactions      []*Transaction
+	PreviousBlockHash []byte
+	Hash              []byte
+	Nonce             int
+}
 
 // transforms incoming data to binary data to be transmitted further
 func (b *Block) Serialize() []byte {
@@ -23,4 +32,18 @@ func Deserialize(data []byte) *Block {
 	decoder.Decode(&block)
 
 	return &block
+}
+
+func NewBlock(transactions []*Transaction, prevBlockHash []byte) *Block {
+	block := &Block{time.Now().Unix(), transactions, prevBlockHash, []byte{}, 0}
+	pow := NewProofOfWork(block)
+	nonce, hash := pow.Run()
+
+	block.Hash = hash[:]
+	block.Nonce = nonce
+	return block
+}
+
+func NewGenesisBlock(coinbase *Transaction) *Block {
+	return NewBlock([]*Transaction{coinbase}, []byte{})
 }

@@ -16,10 +16,10 @@ func (cli *CLI) printUsage() {
 	fmt.Println("  printchain - print all the blocks of the blockchain")
 }
 
-func (cli *CLI) addBlock(data string) {
-	cli.bc.AddBlock(data)
-	fmt.Println("Success")
-}
+// func (cli *CLI) addBlock(data string) {
+// 	cli.bc.MineBlock(data)
+// 	fmt.Println("Success")
+// }
 
 func (cli *CLI) printChain() {
 	iterator := cli.bc.Iterator()
@@ -28,7 +28,7 @@ func (cli *CLI) printChain() {
 		block := iterator.Next()
 		fmt.Println()
 		fmt.Printf("Previous Hash: %x\n", block.PreviousBlockHash)
-		fmt.Printf("Data: %s\n", block.Data)
+		// fmt.Printf("Data: %v\n", block.Transactions)
 		fmt.Printf("Current Hash: %x\n", block.Hash)
 		pow := NewProofOfWork(block)
 		fmt.Printf("Proof of work: %v\n", pow.Validate())
@@ -40,31 +40,38 @@ func (cli *CLI) printChain() {
 	}
 }
 
-func (cli *CLI) Run() {
-	addBlockCmd := flag.NewFlagSet("addBlock", flag.ExitOnError)
-	printChainCmd := flag.NewFlagSet("printChain", flag.ExitOnError)
+func (cli *CLI) createBlockchain(address string) {
+	bc := CreateBlockChain(address)
+	bc.db.Close()
+	fmt.Println("Done")
+}
 
-	addBlockData := addBlockCmd.String("data", "", "data")
+func (cli *CLI) Run() {
+	printChainCmd := flag.NewFlagSet("printChain", flag.ExitOnError)
+	createBlockChainCmd := flag.NewFlagSet("createBlockChain", flag.ExitOnError)
+
+	createBlockChainAddress := createBlockChainCmd.String("address", "", "The address to send the reward for mining the genesis block")
 
 	switch os.Args[1] {
-	case "addBlock":
-		addBlockCmd.Parse(os.Args[2:])
 	case "printChain":
 		printChainCmd.Parse(os.Args[2:])
+	case "createBlockChain":
+		createBlockChainCmd.Parse(os.Args[2:])
 	default:
 		cli.printUsage()
 		os.Exit(1)
 	}
 
-	if addBlockCmd.Parsed() {
-		if *addBlockData == "" {
-			addBlockCmd.Usage()
-			os.Exit(1)
-		}
-		cli.addBlock(*addBlockData)
-	}
-
 	if printChainCmd.Parsed() {
 		cli.printChain()
+	}
+
+	if createBlockChainCmd.Parsed() {
+		if *createBlockChainAddress == "" {
+			createBlockChainCmd.Usage()
+			os.Exit(1)
+		}
+
+		cli.createBlockchain(*createBlockChainAddress)
 	}
 }
