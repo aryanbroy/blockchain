@@ -52,6 +52,11 @@ func (cli *CLI) Run() {
 
 	createBlockChainAddress := createBlockChainCmd.String("address", "", "The address to send the reward for mining the genesis block")
 
+	if len(os.Args) < 2 {
+		cli.printUsage()
+		os.Exit(1)
+	}
+
 	switch os.Args[1] {
 	case "printChain":
 		printChainCmd.Parse(os.Args[2:])
