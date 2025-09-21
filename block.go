@@ -30,7 +30,6 @@ func Deserialize(data []byte) *Block {
 	reader := bytes.NewReader(data)
 	decoder := gob.NewDecoder(reader)
 	decoder.Decode(&block)
-
 	return &block
 }
 

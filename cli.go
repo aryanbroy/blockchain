@@ -3,7 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
+
+	"github.com/boltdb/bolt"
 )
 
 type CLI struct {
@@ -22,6 +25,30 @@ func (cli *CLI) printUsage() {
 // }
 
 func (cli *CLI) printChain() {
+	db, err :=	bolt.Open(dbFile, 0600, nil)
+	if err != nil {
+		log.Panicln("Error opening db file")
+	}
+	
+	var genesisBlockHash []byte
+
+	db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bucket))
+		if b == nil {
+			log.Panicln("No bucket found with name: ", bucket)
+		}
+		genesisBlockHash = b.Get([]byte("l"))
+		return nil
+	})
+
+	// fmt.Printf("Genesis hash: %x\n", genesisBlockHash)
+
+	bc := &Blockchain{
+		tip: genesisBlockHash,
+		db: db,
+	}
+	cli.bc = bc
+
 	iterator := cli.bc.Iterator()
 
 	for {
