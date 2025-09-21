@@ -20,7 +20,7 @@ type BlockchainIterator struct {
 
 const dbFile = "blockchain.db"
 const bucket = "nigaMania"
-const genesisCoinbaseData = "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks" // later
+const genesisCoinbaseData = "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks"
 
 func dbExists(db string) bool {
 	if _, err := os.Stat(db); os.IsNotExist(err) {
@@ -91,13 +91,8 @@ func CreateBlockChain(address string) *Blockchain {
 	err = db.Update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucket([]byte(bucket))
 		if err != nil {
-			if err != bolt.ErrBucketExists {
-				log.Println("Bucket already exists... so i am deleting it without your permission")
-				if err := tx.DeleteBucket([]byte(bucket)); err != nil {
-					log.Println("Error deleting the bucket")
-					return err
-				}
-				err = fmt.Errorf("Remove the bucket, hahaha, enjoy this error now")
+			if err == bolt.ErrBucketExists {
+				err := fmt.Errorf("Bucket already exists!")	
 				return err
 			}
 			log.Println("Error creating a bucket")
