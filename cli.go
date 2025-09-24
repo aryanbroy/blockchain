@@ -25,27 +25,31 @@ func (cli *CLI) printUsage() {
 // }
 
 func (cli *CLI) printChain() {
-	db, err :=	bolt.Open(dbFile, 0600, nil)
+	db, err := bolt.Open(dbFile, 0600, nil)
 	if err != nil {
 		log.Panicln("Error opening db file")
 	}
-	
+
 	var genesisBlockHash []byte
 
-	db.View(func(tx *bolt.Tx) error {
+	err = db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
 		if b == nil {
-			log.Panicln("No bucket found with name: ", bucket)
+			log.Println("No bucket found with name: ", bucket)
+			return err
 		}
 		genesisBlockHash = b.Get([]byte("l"))
 		return nil
 	})
+	if err != nil {
+		log.Panicln("Error starting a read only transaction")
+	}
 
 	// fmt.Printf("Genesis hash: %x\n", genesisBlockHash)
 
 	bc := &Blockchain{
 		tip: genesisBlockHash,
-		db: db,
+		db:  db,
 	}
 	cli.bc = bc
 
@@ -69,7 +73,10 @@ func (cli *CLI) printChain() {
 
 func (cli *CLI) createBlockchain(address string) {
 	bc := CreateBlockChain(address)
-	bc.db.Close()
+	err := bc.db.Close()
+	if err != nil {
+		log.Panicln("Error closing the db")
+	}
 	fmt.Println("Done")
 }
 
@@ -86,9 +93,13 @@ func (cli *CLI) Run() {
 
 	switch os.Args[1] {
 	case "printChain":
-		printChainCmd.Parse(os.Args[2:])
+		if err := printChainCmd.Parse(os.Args[2:]); err != nil {
+			log.Panicln("Error parsing the printChain command")
+		}
 	case "createBlockChain":
-		createBlockChainCmd.Parse(os.Args[2:])
+		if err := createBlockChainCmd.Parse(os.Args[2:]); err != nil {
+			log.Panicln("Error parsing the createblockchain command")
+		}
 	default:
 		cli.printUsage()
 		os.Exit(1)

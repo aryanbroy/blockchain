@@ -51,13 +51,17 @@ func NewBlockChain(address string) (*Blockchain, error) {
 				return err
 			}
 
-			err = b.Put(genesis.Hash, genesis.Serialize())
-			err = b.Put([]byte("l"), genesis.Hash)
-			tip = genesis.Hash
-			if err != nil {
+			if err := b.Put(genesis.Hash, genesis.Serialize()); err != nil {
 				log.Println("Error updating data in db")
 				return err
 			}
+
+			if err := b.Put([]byte("l"), genesis.Hash); err != nil {
+				log.Println("Error updating data in db")
+				return err
+			}
+			tip = genesis.Hash
+
 		} else {
 			tip = b.Get([]byte("l"))
 		}
@@ -92,7 +96,7 @@ func CreateBlockChain(address string) *Blockchain {
 		b, err := tx.CreateBucket([]byte(bucket))
 		if err != nil {
 			if err == bolt.ErrBucketExists {
-				err := fmt.Errorf("Bucket already exists!")	
+				err := fmt.Errorf("bucket already exists")
 				return err
 			}
 			log.Println("Error creating a bucket")
@@ -150,13 +154,24 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) {
 
 	newBlock := NewBlock(transactions, lastHash)
 
-	bc.db.Update(func(tx *bolt.Tx) error {
+	err = bc.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
-		b.Put(newBlock.Hash, newBlock.Serialize())
-		b.Put([]byte("l"), newBlock.Hash)
+		if err := b.Put(newBlock.Hash, newBlock.Serialize()); err != nil {
+			log.Println("error updating the db")
+			return err
+		}
+		if err := b.Put([]byte("l"), newBlock.Hash); err != nil {
+			log.Println("error updating the db")
+			return err
+		}
 		bc.tip = newBlock.Hash
 		return nil
 	})
+
+	if err != nil {
+		log.Println("error mining the block")
+		os.Exit(1)
+	}
 }
 
 func (bc *Blockchain) Iterator() *BlockchainIterator {
