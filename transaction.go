@@ -1,6 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"encoding/hex"
+	"fmt"
+	"slices"
+)
 
 type TXInput struct {
 	Txid      []byte
@@ -31,4 +35,59 @@ func NewCoinbaseTx(to, data string) *Transaction {
 	transaction := Transaction{nil, []TXInput{txIn}, []TXOutput{txOut}}
 
 	return &transaction
+}
+
+func (tx Transaction) isCoinBase() bool {
+	// check coinbase here
+	return true
+}
+
+func (in *TXInput) CanUnlockOutputWith(unlockingData string) bool {
+	return in.ScriptSig == unlockingData
+}
+
+func (out *TXOutput) CanBeUnlockedWith(unlockingData string) bool {
+	return out.ScriptPubKey == unlockingData
+}
+
+func (bc *Blockchain) FindUnspentTx(address string) []Transaction {
+	spentTx := make(map[string][]int)
+	var unspentTx []Transaction
+
+	bci := bc.Iterator()
+
+	for {
+		block := bci.Next()
+
+		for _, tx := range block.Transactions {
+			txId := hex.EncodeToString(tx.ID)
+			hasUnspent := false
+
+			if !tx.isCoinBase() {
+				for _, in := range tx.Vin {
+					inId := hex.EncodeToString(in.Txid)
+					spentTx[inId] = append(spentTx[inId], in.Vout)
+				}
+			}
+
+			for voutIdx, out := range tx.Vout {
+				if spentTx[txId] != nil {
+					isSpent := slices.Contains(spentTx[txId], voutIdx)
+
+					if !isSpent && out.CanBeUnlockedWith(address) {
+						hasUnspent = true
+					}
+				}
+			}
+			if hasUnspent {
+				unspentTx = append(unspentTx, *tx)
+			}
+		}
+
+		if len(block.PreviousBlockHash) == 0 {
+			break
+		}
+	}
+
+	return unspentTx
 }
