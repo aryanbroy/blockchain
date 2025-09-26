@@ -71,12 +71,10 @@ func (bc *Blockchain) FindUnspentTx(address string) []Transaction {
 			}
 
 			for voutIdx, out := range tx.Vout {
-				if spentTx[txId] != nil {
-					isSpent := slices.Contains(spentTx[txId], voutIdx)
+				isSpent := slices.Contains(spentTx[txId], voutIdx)
 
-					if !isSpent && out.CanBeUnlockedWith(address) {
-						hasUnspent = true
-					}
+				if !isSpent && out.CanBeUnlockedWith(address) {
+					hasUnspent = true
 				}
 			}
 			if hasUnspent {
