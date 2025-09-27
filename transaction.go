@@ -65,8 +65,10 @@ func (bc *Blockchain) FindUnspentTx(address string) []Transaction {
 
 			if !tx.isCoinBase() {
 				for _, in := range tx.Vin {
-					inId := hex.EncodeToString(in.Txid)
-					spentTx[inId] = append(spentTx[inId], in.Vout)
+					if in.CanUnlockOutputWith(address) {
+						inId := hex.EncodeToString(in.Txid)
+						spentTx[inId] = append(spentTx[inId], in.Vout)
+					}
 				}
 			}
 
