@@ -91,3 +91,18 @@ func (bc *Blockchain) FindUnspentTx(address string) []Transaction {
 
 	return unspentTx
 }
+
+func (bc *Blockchain) FindUTXOs(address string) []TXOutput {
+	var utxos []TXOutput
+
+	unspentTxs := bc.FindUnspentTx(address)
+	for _, tx := range unspentTxs {
+		for _, out := range tx.Vout {
+			if out.CanBeUnlockedWith(address) {
+				utxos = append(utxos, out)
+			}
+		}
+	}
+
+	return utxos
+}
