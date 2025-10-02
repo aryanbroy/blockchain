@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+	"log"
 	"slices"
 )
 
@@ -129,4 +130,54 @@ Outputs:
 	}
 
 	return accumulated, unspentOutputs
+}
+
+func NewUTXOTransaction(from, to string, amount int, bc *Blockchain) *Transaction {
+	var txInputs []TXInput
+	var txOutputs []TXOutput
+
+	acc, validOutputs := bc.FindSpendableOutputs(from, amount)
+	if acc < amount {
+		log.Panicln("Error! Not enough funds")
+	}
+
+	for txId, outputs := range validOutputs {
+		txid, err := hex.DecodeString(txId)
+		if err != nil {
+			log.Panicln("error decoding transaction id")
+		}
+
+		for _, output := range outputs {
+			currInput := TXInput{
+				Txid:      txid,
+				Vout:      output,
+				ScriptSig: from,
+			}
+			txInputs = append(txInputs, currInput)
+		}
+	}
+
+	currOutput := TXOutput{
+		Value:        acc,
+		ScriptPubKey: to,
+	}
+	txOutputs = append(txOutputs, currOutput)
+
+	var changeOutput TXOutput
+	if acc > amount {
+		changeOutput = TXOutput{
+			Value:        acc - amount,
+			ScriptPubKey: from,
+		}
+	}
+	txOutputs = append(txOutputs, changeOutput)
+
+	tx := Transaction{
+		ID:   nil,
+		Vin:  txInputs,
+		Vout: txOutputs,
+	}
+
+	tx.SetId()
+	return &tx
 }
