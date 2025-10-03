@@ -123,13 +123,33 @@ func (cli *CLI) createBlockchain(address string) {
 	fmt.Println("Done")
 }
 
+func (cli *CLI) send(from, to string, amount int) {
+	bc, err := NewBlockChain(from)
+	if err != nil {
+		log.Panicln("Error initializing blockchain")
+	}
+	defer func() {
+		if err := bc.db.Close(); err != nil {
+			log.Panicln("Error closing the database")
+		}
+	}()
+
+	tx := NewUTXOTransaction(from, to, amount, bc)
+	bc.MineBlock([]*Transaction{tx})
+	fmt.Println("Success")
+}
+
 func (cli *CLI) Run() {
 	printChainCmd := flag.NewFlagSet("printChain", flag.ExitOnError)
 	createBlockChainCmd := flag.NewFlagSet("createBlockChain", flag.ExitOnError)
 	getBalCmd := flag.NewFlagSet("getBalance", flag.ExitOnError)
+	sendCmd := flag.NewFlagSet("send", flag.ExitOnError)
 
 	createBlockChainAddress := createBlockChainCmd.String("address", "", "The address to send the reward for mining the genesis block")
 	getBalAddress := getBalCmd.String("address", "", "Address to fetch balance for")
+	from := sendCmd.String("from", "", "Sender of the transaction")
+	to := sendCmd.String("to", "", "Recipent of the transaction")
+	amount := sendCmd.Int("amount", 0, "Amount to be sent")
 
 	if len(os.Args) < 2 {
 		cli.printUsage()
@@ -149,9 +169,17 @@ func (cli *CLI) Run() {
 		if err := getBalCmd.Parse(os.Args[2:]); err != nil {
 			log.Panicln("Error parsing the getBalance command")
 		}
+	case "send":
+		if err := sendCmd.Parse(os.Args[2:]); err != nil {
+			log.Panicln("Error parsing the send command")
+		}
 	default:
 		cli.printUsage()
 		os.Exit(1)
+	}
+
+	if sendCmd.Parsed() {
+		cli.send(*from, *to, *amount)
 	}
 
 	if getBalCmd.Parsed() {

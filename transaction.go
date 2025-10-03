@@ -158,19 +158,18 @@ func NewUTXOTransaction(from, to string, amount int, bc *Blockchain) *Transactio
 	}
 
 	currOutput := TXOutput{
-		Value:        acc,
+		Value:        amount,
 		ScriptPubKey: to,
 	}
 	txOutputs = append(txOutputs, currOutput)
 
-	var changeOutput TXOutput
 	if acc > amount {
-		changeOutput = TXOutput{
+		changeOutput := TXOutput{
 			Value:        acc - amount,
 			ScriptPubKey: from,
 		}
+		txOutputs = append(txOutputs, changeOutput)
 	}
-	txOutputs = append(txOutputs, changeOutput)
 
 	tx := Transaction{
 		ID:   nil,
