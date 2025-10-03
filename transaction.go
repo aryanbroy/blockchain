@@ -39,8 +39,7 @@ func NewCoinbaseTx(to, data string) *Transaction {
 }
 
 func (tx Transaction) isCoinBase() bool {
-	// check coinbase here
-	return true
+	return len(tx.Vin) == 1 && tx.Vin[0].Vout == -1 && len(tx.Vin[0].Txid) == 0
 }
 
 func (in *TXInput) CanUnlockOutputWith(unlockingData string) bool {
