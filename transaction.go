@@ -24,7 +24,7 @@ type Transaction struct {
 	Vout []TXOutput
 }
 
-const subsidy = 1
+const subsidy = 10
 
 func NewCoinbaseTx(to, data string) *Transaction {
 	if data == "" {
