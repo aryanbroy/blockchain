@@ -141,11 +141,11 @@ func (cli *CLI) send(from, to string, amount int) {
 
 func (cli *CLI) Run() {
 	printChainCmd := flag.NewFlagSet("printChain", flag.ExitOnError)
-	createBlockChainCmd := flag.NewFlagSet("createBlockChain", flag.ExitOnError)
+	createBlockchainCmd := flag.NewFlagSet("createBlockchain", flag.ExitOnError)
 	getBalCmd := flag.NewFlagSet("getBalance", flag.ExitOnError)
 	sendCmd := flag.NewFlagSet("send", flag.ExitOnError)
 
-	createBlockChainAddress := createBlockChainCmd.String("address", "", "The address to send the reward for mining the genesis block")
+	createBlockchainAddress := createBlockchainCmd.String("address", "", "The address to send the reward for mining the genesis block")
 	getBalAddress := getBalCmd.String("address", "", "Address to fetch balance for")
 	from := sendCmd.String("from", "", "Sender of the transaction")
 	to := sendCmd.String("to", "", "Recipent of the transaction")
@@ -161,8 +161,8 @@ func (cli *CLI) Run() {
 		if err := printChainCmd.Parse(os.Args[2:]); err != nil {
 			log.Panicln("Error parsing the printChain command")
 		}
-	case "createBlockChain":
-		if err := createBlockChainCmd.Parse(os.Args[2:]); err != nil {
+	case "createBlockchain":
+		if err := createBlockchainCmd.Parse(os.Args[2:]); err != nil {
 			log.Panicln("Error parsing the createblockchain command")
 		}
 	case "getBalance":
@@ -190,12 +190,12 @@ func (cli *CLI) Run() {
 		cli.printChain()
 	}
 
-	if createBlockChainCmd.Parsed() {
-		if *createBlockChainAddress == "" {
-			createBlockChainCmd.Usage()
+	if createBlockchainCmd.Parsed() {
+		if *createBlockchainAddress == "" {
+			createBlockchainCmd.Usage()
 			os.Exit(1)
 		}
 
-		cli.createBlockchain(*createBlockChainAddress)
+		cli.createBlockchain(*createBlockchainAddress)
 	}
 }
