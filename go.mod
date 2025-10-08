@@ -7,4 +7,7 @@ require (
 	github.com/btcsuite/golangcrypto v0.0.0-20150304025918-53f62d9b43e8
 )
 
-require golang.org/x/sys v0.36.0 // indirect
+require (
+	github.com/btcsuite/btcutil v1.0.2 // indirect
+	golang.org/x/sys v0.36.0 // indirect
+)

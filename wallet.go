@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/btcsuite/golangcrypto/ripemd160"
 )
 
@@ -20,6 +21,8 @@ type Wallet struct {
 type Wallets struct {
 	Wallets map[string]*Wallet
 }
+
+const version = 0
 
 func GenratePrivateKey() ecdsa.PrivateKey {
 	pvtKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -52,5 +55,15 @@ func (wa *Wallet) GenerateAddress() {
 		log.Panicln("Error writing in ripemd function: ", err)
 	}
 	ripemdResult := ripemdHasher.Sum(nil)
-	fmt.Printf("Ripemd: %x\n", ripemdResult)
+
+	versionPayload := append([]byte{version}, ripemdResult...)
+
+	hash := sha256.Sum256(versionPayload)
+	resultHash := sha256.Sum256(hash[:])
+	addrCheckSum := resultHash[:4]
+
+	binaryAddr := append(versionPayload, addrCheckSum...)
+	base58Addr := base58.Encode(binaryAddr)
+
+	fmt.Printf("Original: %x\nEndoced: %s\n", binaryAddr, base58Addr)
 }
