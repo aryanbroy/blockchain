@@ -5,7 +5,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/x509"
 	"fmt"
 	"log"
 
@@ -24,26 +23,31 @@ type Wallets struct {
 
 const version = 0
 
-func GenratePrivateKey() ecdsa.PrivateKey {
-	pvtKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+func NewWallet() *Wallet {
+	prvKey, pubKey := GenerateKeyPair()
+
+	return &Wallet{
+		PrivateKey: prvKey,
+		PublicKey:  pubKey,
+	}
+}
+
+func GenerateKeyPair() (ecdsa.PrivateKey, []byte) {
+	var pubKey []byte
+
+	ec := elliptic.P256()
+	prvKey, err := ecdsa.GenerateKey(ec, rand.Reader)
 	if err != nil {
 		log.Panicln("Error generating private key")
 	}
-	return *pvtKey
+
+	pubKey = append(prvKey.X.Bytes(), prvKey.Y.Bytes()...)
+	return *prvKey, pubKey
 }
 
 func (wa *Wallet) GenerateAddress() {
-	wa.PrivateKey = GenratePrivateKey()
-
-	ecdsaPubKey := &wa.PrivateKey.PublicKey
-	pubKey, err := x509.MarshalPKIXPublicKey(ecdsaPubKey)
-	if err != nil {
-		log.Panicln("Error marshaling public key: ", err)
-	}
-	wa.PublicKey = pubKey
-
 	shaHasher := sha256.New()
-	_, err = shaHasher.Write(pubKey)
+	_, err := shaHasher.Write(wa.PublicKey)
 	if err != nil {
 		log.Panicln("Error writing in sha function: ", err)
 	}
@@ -65,5 +69,5 @@ func (wa *Wallet) GenerateAddress() {
 	binaryAddr := append(versionPayload, addrCheckSum...)
 	base58Addr := base58.Encode(binaryAddr)
 
-	fmt.Printf("Original: %x\nEndoced: %s\n", binaryAddr, base58Addr)
+	fmt.Printf("Original: %x\nEncoded: %s\n", binaryAddr, base58Addr)
 }
