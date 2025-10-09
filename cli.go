@@ -214,6 +214,9 @@ func (cli *CLI) Run() {
 }
 
 func (cli *CLI) createWallet() {
-	wallet := NewWallet()
-	wallet.GenerateAddress()
+	wallets := NewWallets()
+	fmt.Println(wallets)
+	// wallet := NewWallet()
+	// address := wallet.GenerateAddress()
+	// fmt.Printf("Wallet address: %x\n", address)
 }

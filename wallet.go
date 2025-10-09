@@ -5,7 +5,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
-	"fmt"
 	"log"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -17,11 +16,8 @@ type Wallet struct {
 	PublicKey  []byte
 }
 
-type Wallets struct {
-	Wallets map[string]*Wallet
-}
-
 const version = 0
+const walletFile = "wallets.dat"
 
 func NewWallet() *Wallet {
 	prvKey, pubKey := GenerateKeyPair()
@@ -45,9 +41,9 @@ func GenerateKeyPair() (ecdsa.PrivateKey, []byte) {
 	return *prvKey, pubKey
 }
 
-func (wa *Wallet) GenerateAddress() {
+func HashPubKey(pubKey []byte) []byte {
 	shaHasher := sha256.New()
-	_, err := shaHasher.Write(wa.PublicKey)
+	_, err := shaHasher.Write(pubKey)
 	if err != nil {
 		log.Panicln("Error writing in sha function: ", err)
 	}
@@ -58,9 +54,15 @@ func (wa *Wallet) GenerateAddress() {
 	if err != nil {
 		log.Panicln("Error writing in ripemd function: ", err)
 	}
-	ripemdResult := ripemdHasher.Sum(nil)
+	pubKeyHash := ripemdHasher.Sum(nil)
 
-	versionPayload := append([]byte{version}, ripemdResult...)
+	return pubKeyHash
+}
+
+func (wa *Wallet) GenerateAddress() []byte {
+	pubKeyHash := HashPubKey(wa.PublicKey)
+
+	versionPayload := append([]byte{version}, pubKeyHash...)
 
 	hash := sha256.Sum256(versionPayload)
 	resultHash := sha256.Sum256(hash[:])
@@ -69,5 +71,5 @@ func (wa *Wallet) GenerateAddress() {
 	binaryAddr := append(versionPayload, addrCheckSum...)
 	base58Addr := base58.Encode(binaryAddr)
 
-	fmt.Printf("Original: %x\nEncoded: %s\n", binaryAddr, base58Addr)
+	return []byte(base58Addr)
 }

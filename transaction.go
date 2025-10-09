@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/hex"
-	"fmt"
 	"log"
 	"slices"
 )
@@ -11,6 +10,8 @@ type TXInput struct {
 	Txid      []byte
 	Vout      int
 	ScriptSig string
+	// PubKey    []byte
+	// Signature []byte
 }
 
 type TXOutput struct {
@@ -27,14 +28,11 @@ type Transaction struct {
 const subsidy = 10
 
 func NewCoinbaseTx(to, data string) *Transaction {
-	if data == "" {
-		data = fmt.Sprintf("Reward to '%s'", to)
-	}
-
+	// txIn := TXInput{[]byte{}, -1, []byte(data), nil}
 	txIn := TXInput{[]byte{}, -1, data}
 	txOut := TXOutput{subsidy, to}
-	transaction := Transaction{nil, []TXInput{txIn}, []TXOutput{txOut}}
 
+	transaction := Transaction{nil, []TXInput{txIn}, []TXOutput{txOut}}
 	return &transaction
 }
 
