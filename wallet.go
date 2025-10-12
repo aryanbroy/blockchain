@@ -16,6 +16,13 @@ type Wallet struct {
 	PublicKey  []byte
 }
 
+type StorageWallet struct {
+	PrivateDer []byte `json:"priv_der"`
+	PubKeyByte []byte `json:"pubKey"`
+	Curve      string `json:"curve"`
+	Address    string `json:"address"`
+}
+
 const version = 0
 const walletFile = "wallets.dat"
 
