@@ -20,6 +20,7 @@ func NewWallets() *Wallets {
 	// fmt.Println("Wallets: ", wallets)
 
 	wallets.LoadFromFile()
+	fmt.Println(wallets)
 
 	return &wallets
 }
@@ -69,5 +70,20 @@ func (ws *Wallets) LoadFromFile() {
 		log.Panicln("Error unmarshaling byte data to store wallet")
 	}
 
-	fmt.Println(storeWallet)
+	address := storeWallet.Address
+
+	prvKey, err := x509.ParseECPrivateKey(storeWallet.PrivateDer)
+	if err != nil {
+		log.Panicln("Error parsing der bytes to private key: ", err)
+	}
+
+	wallet := &Wallet{
+		PrivateKey: *prvKey,
+		PublicKey:  storeWallet.PubKeyByte,
+	}
+
+	wallets := make(map[string]*Wallet)
+	wallets[address] = wallet
+
+	ws.Wallets = wallets
 }
