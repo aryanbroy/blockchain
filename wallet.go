@@ -48,6 +48,21 @@ func GenerateKeyPair() (ecdsa.PrivateKey, []byte) {
 	return *prvKey, pubKey
 }
 
+func (wa *Wallet) GenerateAddress() []byte {
+	pubKeyHash := HashPubKey(wa.PublicKey)
+
+	versionPayload := append([]byte{version}, pubKeyHash...)
+
+	hash := sha256.Sum256(versionPayload)
+	resultHash := sha256.Sum256(hash[:])
+	addrCheckSum := resultHash[:4]
+
+	binaryAddr := append(versionPayload, addrCheckSum...)
+	base58Addr := base58.Encode(binaryAddr)
+
+	return []byte(base58Addr)
+}
+
 func HashPubKey(pubKey []byte) []byte {
 	shaHasher := sha256.New()
 	_, err := shaHasher.Write(pubKey)
@@ -64,19 +79,4 @@ func HashPubKey(pubKey []byte) []byte {
 	pubKeyHash := ripemdHasher.Sum(nil)
 
 	return pubKeyHash
-}
-
-func (wa *Wallet) GenerateAddress() []byte {
-	pubKeyHash := HashPubKey(wa.PublicKey)
-
-	versionPayload := append([]byte{version}, pubKeyHash...)
-
-	hash := sha256.Sum256(versionPayload)
-	resultHash := sha256.Sum256(hash[:])
-	addrCheckSum := resultHash[:4]
-
-	binaryAddr := append(versionPayload, addrCheckSum...)
-	base58Addr := base58.Encode(binaryAddr)
-
-	return []byte(base58Addr)
 }
