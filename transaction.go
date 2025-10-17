@@ -92,7 +92,6 @@ func NewUTXOTransaction(from, to string, amount int, bc *Blockchain) *Transactio
 				Txid: txid,
 				Vout: output,
 				// ScriptSig: from,
-
 			}
 			txInputs = append(txInputs, currInput)
 		}

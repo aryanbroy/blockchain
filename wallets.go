@@ -8,7 +8,11 @@ import (
 )
 
 type Wallets struct {
-	Wallets map[string]*Wallet `json:"wallets"`
+	Wallets map[string]*Wallet
+}
+
+type StorageWallets struct {
+	Wallets map[string]*StorageWallet `json:"wallets"`
 }
 
 func NewWallets() *Wallets {
@@ -36,31 +40,43 @@ func (ws *Wallets) LoadFromFile() {
 
 	// fmt.Println(string(byteData))
 
-	storeWallet := &StorageWallet{}
-	err = json.Unmarshal(byteData, storeWallet)
+	sws := &StorageWallets{}
+	err = json.Unmarshal(byteData, sws)
 	if err != nil {
 		log.Panicln("Error unmarshaling byte data to store wallet")
 	}
 
-	address := storeWallet.Address
-
-	prvKey, err := x509.ParseECPrivateKey(storeWallet.PrivateDer)
-	if err != nil {
-		log.Panicln("Error parsing der bytes to private key: ", err)
-	}
-
-	wallet := &Wallet{
-		PrivateKey: *prvKey,
-		PublicKey:  storeWallet.PubKeyByte,
-	}
-
-	wallets := make(map[string]*Wallet)
-	wallets[address] = wallet
-
-	ws.Wallets = wallets
+	// address := storeWallet.Address
+	//
+	// prvKey, err := x509.ParseECPrivateKey(storeWallet.PrivateDer)
+	// if err != nil {
+	// 	log.Panicln("Error parsing der bytes to private key: ", err)
+	// }
+	//
+	// wallet := &Wallet{
+	// 	PrivateKey: *prvKey,
+	// 	PublicKey:  storeWallet.PubKeyByte,
+	// }
+	//
+	// wallets := make(map[string]*Wallet)
+	// wallets[address] = wallet
+	//
+	// ws.Wallets = wallets
 }
 
 func (ws *Wallets) CreateWallet() string {
+	sws := &StorageWallets{Wallets: make(map[string]*StorageWallet)}
+
+	data, err := ReadJson(walletFile)
+	if err != nil {
+		log.Panicln("Error reading json: wallet file, ", err)
+	}
+
+	err = json.Unmarshal(data, sws)
+	if err != nil {
+		log.Panicln("Error unmarshaling into storageWallets: ", err)
+	}
+
 	wallet := NewWallet()
 	address := string(wallet.GenerateAddress())
 
@@ -80,7 +96,9 @@ func (ws *Wallets) CreateWallet() string {
 	storeWallet.PubKeyByte = wallet.PublicKey
 	storeWallet.Address = address
 
-	jsonData, err := json.Marshal(storeWallet)
+	sws.Wallets[address] = storeWallet
+
+	jsonData, err := json.MarshalIndent(sws, "", "  ")
 	if err != nil {
 		log.Panicln("Error marshaling data: ", err)
 	}
@@ -91,4 +109,21 @@ func (ws *Wallets) CreateWallet() string {
 	}
 
 	return address
+}
+
+func ReadJson(filepath string) ([]byte, error) {
+	_, err := os.Stat(filepath)
+	if os.IsNotExist(err) {
+		log.Panicln("No such file exists, error reading json")
+	}
+	if err != nil {
+		log.Panicln("Error reading json file")
+	}
+
+	jsonData, err := os.ReadFile(filepath)
+	if err != nil {
+		return nil, err
+	}
+
+	return jsonData, err
 }

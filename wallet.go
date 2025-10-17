@@ -26,7 +26,7 @@ type StorageWallet struct {
 }
 
 const version = 0
-const walletFile = "wallets.dat"
+const walletFile = "wallets.json"
 
 func NewWallet() *Wallet {
 	prvKey, pubKey := GenerateKeyPair()
