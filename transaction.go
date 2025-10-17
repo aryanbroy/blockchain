@@ -1,23 +1,18 @@
 package main
 
 import (
+	"bytes"
+	"crypto/ecdsa"
+	"crypto/rand"
+
+	// "crypto/rand"
+	"crypto/sha256"
+	"encoding/gob"
 	"encoding/hex"
+	"fmt"
 	"log"
 	"slices"
 )
-
-type TXInput struct {
-	Txid      []byte
-	Vout      int
-	ScriptSig string
-	// PubKey    []byte
-	// Signature []byte
-}
-
-type TXOutput struct {
-	Value        int
-	ScriptPubKey string
-}
 
 type Transaction struct {
 	ID   []byte
@@ -28,24 +23,12 @@ type Transaction struct {
 const subsidy = 10
 
 func NewCoinbaseTx(to, data string) *Transaction {
-	// txIn := TXInput{[]byte{}, -1, []byte(data), nil}
-	txIn := TXInput{[]byte{}, -1, data}
+	txIn := TXInput{[]byte{}, -1, []byte(data), nil}
+	// txIn := TXInput{[]byte{}, -1, data}
 	txOut := TXOutput{subsidy, to}
 
 	transaction := Transaction{nil, []TXInput{txIn}, []TXOutput{txOut}}
 	return &transaction
-}
-
-func (tx Transaction) isCoinBase() bool {
-	return len(tx.Vin) == 1 && tx.Vin[0].Vout == -1 && len(tx.Vin[0].Txid) == 0
-}
-
-func (in *TXInput) CanUnlockOutputWith(unlockingData string) bool {
-	return in.ScriptSig == unlockingData
-}
-
-func (out *TXOutput) CanBeUnlockedWith(unlockingData string) bool {
-	return out.ScriptPubKey == unlockingData
 }
 
 func (bc *Blockchain) FindUnspentTx(address string) []Transaction {
@@ -63,10 +46,9 @@ func (bc *Blockchain) FindUnspentTx(address string) []Transaction {
 
 			if !tx.isCoinBase() {
 				for _, in := range tx.Vin {
-					if in.CanUnlockOutputWith(address) {
-						inId := hex.EncodeToString(in.Txid)
-						spentTx[inId] = append(spentTx[inId], in.Vout)
-					}
+					// check: if this output can be unlocked by the user's pubkey
+					inId := hex.EncodeToString(in.Txid)
+					spentTx[inId] = append(spentTx[inId], in.Vout)
 				}
 			}
 
@@ -90,45 +72,6 @@ func (bc *Blockchain) FindUnspentTx(address string) []Transaction {
 	return unspentTx
 }
 
-func (bc *Blockchain) FindUTXOs(address string) []TXOutput {
-	var utxos []TXOutput
-
-	unspentTxs := bc.FindUnspentTx(address)
-	for _, tx := range unspentTxs {
-		for _, out := range tx.Vout {
-			if out.CanBeUnlockedWith(address) {
-				utxos = append(utxos, out)
-			}
-		}
-	}
-
-	return utxos
-}
-
-func (bc *Blockchain) FindSpendableOutputs(address string, amount int) (int, map[string][]int) {
-	unspentOutputs := make(map[string][]int)
-	accumulated := 0
-	unspentTx := bc.FindUnspentTx(address)
-
-Outputs:
-	for _, tx := range unspentTx {
-		txId := hex.EncodeToString(tx.ID)
-
-		for outputIdx, output := range tx.Vout {
-			if output.CanBeUnlockedWith(address) {
-				accumulated += output.Value
-				unspentOutputs[txId] = append(unspentOutputs[txId], outputIdx)
-
-				if accumulated >= amount {
-					break Outputs
-				}
-			}
-		}
-	}
-
-	return accumulated, unspentOutputs
-}
-
 func NewUTXOTransaction(from, to string, amount int, bc *Blockchain) *Transaction {
 	var txInputs []TXInput
 	var txOutputs []TXOutput
@@ -146,9 +89,10 @@ func NewUTXOTransaction(from, to string, amount int, bc *Blockchain) *Transactio
 
 		for _, output := range outputs {
 			currInput := TXInput{
-				Txid:      txid,
-				Vout:      output,
-				ScriptSig: from,
+				Txid: txid,
+				Vout: output,
+				// ScriptSig: from,
+
 			}
 			txInputs = append(txInputs, currInput)
 		}
@@ -176,4 +120,30 @@ func NewUTXOTransaction(from, to string, amount int, bc *Blockchain) *Transactio
 
 	tx.SetId()
 	return &tx
+}
+
+func (tx *Transaction) HashTransaction() []byte {
+	var buf bytes.Buffer
+
+	encoder := gob.NewEncoder(&buf)
+
+	err := encoder.Encode(tx)
+	if err != nil {
+		log.Panicln("Error encoding transaction: ", err)
+	}
+
+	txHash := sha256.Sum256(buf.Bytes())
+	return txHash[:]
+}
+
+func Sign(tx *Transaction, prvKey *ecdsa.PrivateKey) []byte {
+	txHash := tx.HashTransaction()
+	fmt.Println(string(txHash))
+
+	signBytes, err := ecdsa.SignASN1(rand.Reader, prvKey, txHash)
+	if err != nil {
+		log.Panicln("Error signing a signature: ", err)
+	}
+
+	return signBytes
 }
