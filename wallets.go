@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/x509"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 )
@@ -26,12 +25,16 @@ func (ws *Wallets) LoadFromFile() {
 	if os.IsNotExist(err) {
 		return
 	}
+	if err != nil {
+		log.Panicln("Error describing a file: ", err)
+	}
+
 	byteData, err := os.ReadFile(walletFile)
 	if err != nil {
 		log.Panicln("Error reading from wallet file")
 	}
 
-	fmt.Println(string(byteData))
+	// fmt.Println(string(byteData))
 
 	storeWallet := &StorageWallet{}
 	err = json.Unmarshal(byteData, storeWallet)
@@ -82,9 +85,9 @@ func (ws *Wallets) CreateWallet() string {
 		log.Panicln("Error marshaling data: ", err)
 	}
 
-	err = os.WriteFile(walletFile, jsonData, 0544)
+	err = os.WriteFile(walletFile, jsonData, 0777)
 	if err != nil {
-		log.Panicln("Error writing wallet data to file: ", err)
+		log.Panicln("Error writing wallet json data to file: ", err)
 	}
 
 	return address

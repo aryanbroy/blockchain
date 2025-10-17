@@ -5,7 +5,9 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/btcsuite/golangcrypto/ripemd160"
@@ -79,4 +81,23 @@ func HashPubKey(pubKey []byte) []byte {
 	pubKeyHash := ripemdHasher.Sum(nil)
 
 	return pubKeyHash
+}
+
+func GetWallet(address string) *Wallet {
+	_, err := os.Stat(walletFile)
+	if os.IsNotExist(err) {
+		log.Panicln("Error, wallet file does not exist")
+	}
+	if err != nil {
+		log.Panicln("Error describing a file: ", err)
+	}
+
+	byteData, err := os.ReadFile(walletFile)
+	if err != nil {
+		log.Panicln("Error reading from wallet file")
+	}
+
+	fmt.Println("Stored data: ", string(byteData))
+	wallet := &Wallet{}
+	return wallet
 }
