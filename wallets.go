@@ -1,8 +1,8 @@
 package main
 
 import (
-	"crypto/x509"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 )
@@ -46,6 +46,8 @@ func (ws *Wallets) LoadFromFile() {
 		log.Panicln("Error unmarshaling byte data to store wallet")
 	}
 
+	wallets := sws.Wallets
+	fmt.Println(wallets)
 	// address := storeWallet.Address
 	//
 	// prvKey, err := x509.ParseECPrivateKey(storeWallet.PrivateDer)
@@ -68,6 +70,10 @@ func (ws *Wallets) CreateWallet() string {
 	sws := &StorageWallets{Wallets: make(map[string]*StorageWallet)}
 
 	data, err := ReadJson(walletFile)
+	if os.IsNotExist(err) {
+		address := WriteToJson(ws, sws)
+		return address
+	}
 	if err != nil {
 		log.Panicln("Error reading json: wallet file, ", err)
 	}
@@ -77,53 +83,6 @@ func (ws *Wallets) CreateWallet() string {
 		log.Panicln("Error unmarshaling into storageWallets: ", err)
 	}
 
-	wallet := NewWallet()
-	address := string(wallet.GenerateAddress())
-
-	ws.Wallets[address] = wallet
-
-	privKey := wallet.PrivateKey
-	derBytes, err := x509.MarshalECPrivateKey(&privKey)
-	if err != nil {
-		log.Panicln("Error marshaling private key, x509 error: ", err)
-	}
-
-	ws.Wallets[address] = wallet
-
-	storeWallet := &StorageWallet{}
-	storeWallet.Curve = "P-256"
-	storeWallet.PrivateDer = derBytes
-	storeWallet.PubKeyByte = wallet.PublicKey
-	storeWallet.Address = address
-
-	sws.Wallets[address] = storeWallet
-
-	jsonData, err := json.MarshalIndent(sws, "", "  ")
-	if err != nil {
-		log.Panicln("Error marshaling data: ", err)
-	}
-
-	err = os.WriteFile(walletFile, jsonData, 0777)
-	if err != nil {
-		log.Panicln("Error writing wallet json data to file: ", err)
-	}
-
+	address := WriteToJson(ws, sws)
 	return address
-}
-
-func ReadJson(filepath string) ([]byte, error) {
-	_, err := os.Stat(filepath)
-	if os.IsNotExist(err) {
-		log.Panicln("No such file exists, error reading json")
-	}
-	if err != nil {
-		log.Panicln("Error reading json file")
-	}
-
-	jsonData, err := os.ReadFile(filepath)
-	if err != nil {
-		return nil, err
-	}
-
-	return jsonData, err
 }
