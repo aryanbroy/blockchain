@@ -5,7 +5,8 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
-	"fmt"
+	"crypto/x509"
+	"encoding/json"
 	"log"
 	"os"
 
@@ -83,21 +84,41 @@ func HashPubKey(pubKey []byte) []byte {
 	return pubKeyHash
 }
 
-func GetWallet(address string) *Wallet {
+func GetWallet(address string) (*Wallet, error) {
 	_, err := os.Stat(walletFile)
 	if os.IsNotExist(err) {
-		log.Panicln("Error, wallet file does not exist")
+		log.Println("Error, wallet file does not exist")
+		return nil, err
 	}
 	if err != nil {
-		log.Panicln("Error describing a file: ", err)
+		log.Println("Error describing a file: ")
+		return nil, err
 	}
 
 	byteData, err := os.ReadFile(walletFile)
 	if err != nil {
-		log.Panicln("Error reading from wallet file")
+		return nil, err
 	}
 
-	fmt.Println("Stored data: ", string(byteData))
+	sws := &StorageWallets{}
+	err = json.Unmarshal(byteData, sws)
+	if err != nil {
+		log.Println("Error unmarshaling json data")
+		return nil, err
+	}
+
+	wallets := sws.Wallets
+	storageWallets := wallets[address]
+
+	privKey, err := x509.ParseECPrivateKey(storageWallets.PrivateDer)
+	if err != nil {
+		log.Println("Error parsing private key")
+		return nil, err
+	}
+
 	wallet := &Wallet{}
-	return wallet
+	wallet.PrivateKey = *privKey
+	wallet.PublicKey = storageWallets.PubKeyByte
+
+	return wallet, nil
 }

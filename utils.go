@@ -2,10 +2,13 @@ package main
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/gob"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 )
@@ -75,4 +78,21 @@ func ReadJson(filepath string) ([]byte, error) {
 	}
 
 	return jsonData, err
+}
+
+func Sign(tx *Transaction, prvKey *ecdsa.PrivateKey) []byte {
+	txHash := tx.HashTransaction()
+	fmt.Println(string(txHash))
+
+	signBytes, err := ecdsa.SignASN1(rand.Reader, prvKey, txHash)
+	if err != nil {
+		log.Panicln("Error signing a signature: ", err)
+	}
+
+	return signBytes
+}
+
+func Verify(tx *Transaction) bool {
+	isVerified := false
+	return isVerified
 }

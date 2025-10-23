@@ -2,14 +2,9 @@ package main
 
 import (
 	"bytes"
-	"crypto/ecdsa"
-	"crypto/rand"
-
-	// "crypto/rand"
 	"crypto/sha256"
 	"encoding/gob"
 	"encoding/hex"
-	"fmt"
 	"log"
 	"slices"
 )
@@ -91,7 +86,6 @@ func NewUTXOTransaction(from, to string, amount int, bc *Blockchain) *Transactio
 			currInput := TXInput{
 				Txid: txid,
 				Vout: output,
-				// ScriptSig: from,
 			}
 			txInputs = append(txInputs, currInput)
 		}
@@ -116,8 +110,19 @@ func NewUTXOTransaction(from, to string, amount int, bc *Blockchain) *Transactio
 		Vin:  txInputs,
 		Vout: txOutputs,
 	}
-
 	tx.SetId()
+
+	wallet, err := GetWallet(from)
+	if err != nil {
+		log.Panicln("Error fetching wallet info: ", err)
+	}
+
+	signature := Sign(&tx, &wallet.PrivateKey)
+	for i := range tx.Vin {
+		tx.Vin[i].Signature = signature
+		tx.Vin[i].PubKey = wallet.PublicKey
+	}
+
 	return &tx
 }
 
@@ -133,16 +138,4 @@ func (tx *Transaction) HashTransaction() []byte {
 
 	txHash := sha256.Sum256(buf.Bytes())
 	return txHash[:]
-}
-
-func Sign(tx *Transaction, prvKey *ecdsa.PrivateKey) []byte {
-	txHash := tx.HashTransaction()
-	fmt.Println(string(txHash))
-
-	signBytes, err := ecdsa.SignASN1(rand.Reader, prvKey, txHash)
-	if err != nil {
-		log.Panicln("Error signing a signature: ", err)
-	}
-
-	return signBytes
 }

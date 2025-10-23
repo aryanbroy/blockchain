@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 )
@@ -46,8 +45,6 @@ func (ws *Wallets) LoadFromFile() {
 		log.Panicln("Error unmarshaling byte data to store wallet")
 	}
 
-	wallets := sws.Wallets
-	fmt.Println(wallets)
 	// address := storeWallet.Address
 	//
 	// prvKey, err := x509.ParseECPrivateKey(storeWallet.PrivateDer)
